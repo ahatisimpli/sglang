@@ -18,6 +18,7 @@ import torch
 from torch import nn
 from transformers import Qwen2Config
 
+from sglang.python.sglang.srt.layers.linear import ColumnParallelLinear
 from sglang.srt.layers.pooler import EmbeddingPoolerOutput, Pooler, PoolingType
 from sglang.srt.layers.quantization.base_config import QuantizationConfig
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
