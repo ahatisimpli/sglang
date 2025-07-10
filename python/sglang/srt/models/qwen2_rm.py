@@ -44,7 +44,7 @@ class Qwen2ForRewardModel(nn.Module):
                 self.num_labels,
                 bias=True,
                 quant_config=quant_config,
-                prefix=add_prefix("scre", prefix)
+                prefix=add_prefix("score", prefix)
              ) 
         self.pooler = Pooler(pooling_type=PoolingType.LAST, normalize=False)
 

@@ -147,12 +147,14 @@ class ServerArgs:
     speculative_accept_threshold_single: float = 1.0
     speculative_accept_threshold_acc: float = 1.0
     speculative_token_map: Optional[str] = None
+    simple_spec_num_draft_tokens: Optional[int] = None   
+    simple_spec_acceptance_threshold: float = 0.9    
+    simple_spec_draft_model_path: Optional[str] = None
 
     # Expert parallelism
     ep_size: int = 1
     enable_ep_moe: bool = False
     enable_deepep_moe: bool = False
-    enable_flashinfer_moe: bool = False
     deepep_mode: Optional[Literal["auto", "normal", "low_latency"]] = "auto"
     ep_num_redundant_experts: int = 0
     ep_dispatch_algorithm: Optional[Literal["static", "dynamic", "fake"]] = None
@@ -245,15 +247,7 @@ class ServerArgs:
             logger.warning(
                 f"EP MoE is enabled. The expert parallel size is adjusted to be the same as the tensor parallel size[{self.tp_size}]."
             )
-        if self.enable_flashinfer_moe:
-            assert (
-                self.quantization == "modelopt_fp4"
-            ), "modelopt_fp4 quantization is required for Flashinfer MOE"
-            os.environ["TRTLLM_ENABLE_PDL"] = "1"
-            self.disable_shared_experts_fusion = True
-            logger.warning(
-                f"Flashinfer MoE is enabled. Shared expert fusion is disabled."
-            )
+
         # Set missing default values
         if self.tokenizer_path is None:
             self.tokenizer_path = self.model_path
@@ -326,7 +320,7 @@ class ServerArgs:
                 self.chunked_prefill_size = 4096
         assert self.chunked_prefill_size % self.page_size == 0
 
-        # Set cuda graph max batch size
+        # Set cuda graph max batch  size
         if self.cuda_graph_max_bs is None:
             # Based on detailed statistics, when serving TP1/TP2 models on lower-end GPUs with HBM<25G, you can either disable cuda graph or set `cuda_graph_max_bs` to a very small value to reduce the memory overhead of creating cuda graphs, with almost no impact on performance. However, when serving models with TP4 or TP8, we need to enable cuda graph to maintain high performance. In this case, we can set `cuda_graph_max_bs` to 80 (half of the default value 160) to reduce the memory overhead of creating cuda graphs. Looking at the logs from TP4 serving of qwen2-72b, a value of 80 is sufficient and can reduce the memory overhead of creating cuda graphs on lower-end GPUs compared to the original 160, avoiding OOM issues.
             if gpu_mem is not None and gpu_mem < 35 * 1024:
@@ -396,6 +390,7 @@ class ServerArgs:
             ), "Please enable dp attention when setting enable_dp_attention. "
 
         # DeepEP MoE
+        self.enable_sp_layernorm = False
         if self.enable_deepep_moe:
             if self.deepep_mode == "auto":
                 assert (
@@ -405,6 +400,9 @@ class ServerArgs:
                 logger.warning("Cuda graph is disabled because deepep_mode=`normal`")
                 self.disable_cuda_graph = True
             self.ep_size = self.tp_size
+            self.enable_sp_layernorm = (
+                self.dp_size < self.tp_size if self.enable_dp_attention else True
+            )
             logger.warning(
                 f"DeepEP MoE is enabled. The expert parallel size is adjusted to be the same as the tensor parallel size[{self.tp_size}]."
             )
@@ -1172,11 +1170,6 @@ class ServerArgs:
             help="Enabling expert parallelism for moe. The ep size is equal to the tp size.",
         )
         parser.add_argument(
-            "--enable-flashinfer-moe",
-            action="store_true",
-            help="Enable FlashInfer CUTLASS MoE backend for modelopt_fp4 quant on Blackwell. Supports MoE-EP with --enable-ep-moe",
-        )
-        parser.add_argument(
             "--enable-deepep-moe",
             action="store_true",
             help="Enabling DeepEP MoE implementation for EP MoE.",
@@ -1598,6 +1591,24 @@ class ServerArgs:
             nargs="*",
             default=None,
             help="The custom dataloader which used to update the model. Should be set with a valid import path, such as my_package.weight_load_func",
+        )
+
+        parser.add_argument(  
+            "--simple-spec-num-draft-tokens",  
+            type=int,  
+            default=ServerArgs.simple_spec_num_draft_tokens,  
+            help="Number of draft tokens to generate in simple speculative decoding."  
+        )  
+        parser.add_argument(  
+            "--simple-spec-acceptance-threshold",   
+            type=float,  
+            default=ServerArgs.simple_spec_acceptance_threshold,  
+            help="Acceptance threshold for simple speculative decoding."  
+        )  
+        parser.add_argument(  
+            "--simple-spec-draft-model-path",  
+            type=str,  
+            help="Path to the draft model for simple speculative decoding."  
         )
 
     @classmethod
