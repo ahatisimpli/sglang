@@ -168,6 +168,7 @@ class TritonAttnBackend(AttentionBackend):
         window_num_kv_splits = None
         spec_info = forward_batch.spec_info
 
+        if forward_batch.forward_mode.is_decode_or_idle():
         # Add support for simple speculative decoding
         if hasattr(forward_batch, 'spec_algorithm') and \
            forward_batch.spec_algorithm == SpeculativeAlgorithm.SIMPLE_SPEC:
