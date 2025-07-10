@@ -69,6 +69,10 @@ if TYPE_CHECKING:
     from sglang.srt.speculative.eagle_utils import EagleDraftInput, EagleVerifyInput
     from sglang.srt.speculative.spec_info import SpeculativeAlgorithm
 
+from sglang.srt.speculative.simple_spec.simple_spec_utils import SimpleSpecDraftInput, SimpleSpecVerifyInput  
+  
+
+
 INIT_INCREMENTAL_DETOKENIZATION_OFFSET = 5
 
 GLOBAL_SERVER_ARGS_KEYS = [
@@ -893,7 +897,8 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
 
     # Speculative decoding
     spec_algorithm: SpeculativeAlgorithm = None
-    spec_info: Optional[Union[EagleDraftInput, EagleVerifyInput]] = None
+  #  spec_info: Optional[Union[EagleDraftInput, EagleVerifyInput]] = None
+    spec_info: Optional[Union[EagleVerifyInput, EagleDraftInput, SimpleSpecDraftInput, SimpleSpecVerifyInput]] = None
 
     # Enable custom logit processor
     enable_custom_logit_processor: bool = False

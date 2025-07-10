@@ -39,13 +39,11 @@ class Qwen2ForRewardModel(nn.Module):
         self.model = Qwen2Model(
             config, quant_config=quant_config, prefix=add_prefix("model", prefix)
         )
-        self.score = ColumnParallelLinear(
-                config.hidden_size,
-                self.num_labels,
-                bias=True,
-                quant_config=quant_config,
-                prefix=add_prefix("score", prefix)
-             ) 
+        self.score = nn.Sequential(
+            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.ReLU(),
+            nn.Linear(config.hidden_size, self.num_labels),
+        )
         self.pooler = Pooler(pooling_type=PoolingType.LAST, normalize=False)
 
         self.eos_token_id = config.eos_token_id

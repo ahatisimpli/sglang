@@ -13,6 +13,7 @@ from sglang.srt.layers.dp_attention import get_attention_tp_size
 from sglang.srt.layers.radix_attention import AttentionType
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch, ForwardMode
 from sglang.srt.utils import get_bool_env_var, get_device_core_count, next_power_of_2
+from sglang.srt.speculative.spec_info import SpeculativeAlgorithm
 
 if TYPE_CHECKING:
     from sglang.srt.layers.radix_attention import RadixAttention
@@ -167,7 +168,11 @@ class TritonAttnBackend(AttentionBackend):
         window_num_kv_splits = None
         spec_info = forward_batch.spec_info
 
-        if forward_batch.forward_mode.is_decode_or_idle():
+        # Add support for simple speculative decoding
+        if hasattr(forward_batch, 'spec_algorithm') and \
+           forward_batch.spec_algorithm == SpeculativeAlgorithm.SIMPLE_SPEC:
+            pass  # Placeholder for SIMPLE_SPEC logic, no attribute access
+        elif forward_batch.forward_mode.is_decode_or_idle():
             if spec_info is None:
                 kv_indptr[1 : bs + 1] = torch.cumsum(forward_batch.seq_lens, dim=0)
                 kv_indptr = kv_indptr[: bs + 1]

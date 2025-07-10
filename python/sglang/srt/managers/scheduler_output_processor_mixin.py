@@ -206,6 +206,13 @@ class SchedulerOutputProcessorMixin:
             if batch.return_logprob:
                 next_token_logprobs = logits_output.next_token_logprobs.tolist()
 
+        elif batch.spec_algorithm.is_simple_spec():  
+            # Handle simple spec output processing  
+            next_token_ids = next_token_ids.tolist()  
+            if batch.return_logprob:  
+                next_token_logprobs = logits_output.next_token_logprobs.tolist()
+
+
         self.token_to_kv_pool_allocator.free_group_begin()
 
         # Check finish condition

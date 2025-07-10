@@ -41,6 +41,10 @@ import triton.language as tl
 from sglang.srt.layers.rotary_embedding import MRotaryEmbedding
 from sglang.srt.utils import flatten_nested_list, get_compiler_backend, support_triton
 
+from sglang.srt.speculative.simple_spec.simple_spec_utils import SimpleSpecDraftInput, SimpleSpecVerifyInput  
+  
+
+
 if TYPE_CHECKING:
     from sglang.srt.layers.attention.base_attn_backend import AttentionBackend
     from sglang.srt.managers.schedule_batch import ModelWorkerBatch, MultimodalInputs

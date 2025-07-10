@@ -155,6 +155,7 @@ class ServerArgs:
     ep_size: int = 1
     enable_ep_moe: bool = False
     enable_deepep_moe: bool = False
+    enable_flashinfer_moe: bool = False
     deepep_mode: Optional[Literal["auto", "normal", "low_latency"]] = "auto"
     ep_num_redundant_experts: int = 0
     ep_dispatch_algorithm: Optional[Literal["static", "dynamic", "fake"]] = None
@@ -246,6 +247,16 @@ class ServerArgs:
             self.ep_size = self.tp_size
             logger.warning(
                 f"EP MoE is enabled. The expert parallel size is adjusted to be the same as the tensor parallel size[{self.tp_size}]."
+            )
+
+        if self.enable_flashinfer_moe:
+            assert (
+                self.quantization == "modelopt_fp4"
+            ), "modelopt_fp4 quantization is required for Flashinfer MOE"
+            os.environ["TRTLLM_ENABLE_PDL"] = "1"
+            self.disable_shared_experts_fusion = True
+            logger.warning(
+                f"Flashinfer MoE is enabled. Shared expert fusion is disabled."
             )
 
         # Set missing default values
@@ -755,6 +766,7 @@ class ServerArgs:
             default=ServerArgs.mem_fraction_static,
             help="The fraction of the memory used for static allocation (model weights and KV cache memory pool). Use a smaller value if you see out-of-memory errors.",
         )
+
         parser.add_argument(
             "--max-running-requests",
             type=int,
@@ -786,6 +798,11 @@ class ServerArgs:
             default=ServerArgs.schedule_policy,
             choices=["lpm", "random", "fcfs", "dfs-weight"],
             help="The scheduling policy of the requests.",
+        )
+        parser.add_argument(
+            "--enable-flashinfer-moe",
+            action="store_true",
+            help="Enable FlashInfer CUTLASS MoE backend for modelopt_fp4 quant on Blackwell. Supports MoE-EP with --enable-ep-moe",
         )
         parser.add_argument(
             "--schedule-conservativeness",
